@@ -18,20 +18,14 @@ def main():
     out = ap.parse_args().out
     out.mkdir(parents=True, exist_ok=True)
 
-    ell = {}
-    for sid, s in json.loads((DATA / "ellipsoids.json").read_text())["shapes"].items():
-        mesh = shapes.ellipsoid(s["gamma"])
-        ell.update({f"{sid}__verts": mesh.verts, f"{sid}__faces": mesh.faces,
-                    f"{sid}__voxels": shapes.spheroid_voxels(s["gamma"])})
-        print(sid, len(mesh.verts), flush=True)
-    np.savez_compressed(out / "ellipsoids.npz", **ell)
-
-    sup = {}
-    for name, p in json.loads((DATA / "superellipsoids.json").read_text())["shapes"].items():
-        mesh = shapes.superellipsoid(p)
-        sup.update({f"{name}__verts": mesh.verts, f"{name}__faces": mesh.faces})
-        print(name, len(mesh.verts), flush=True)
-    np.savez_compressed(out / "superellipsoids.npz", **sup)
+    for name, build in (("ellipsoids", lambda s: shapes.ellipsoid(s["gamma"])),
+                        ("superellipsoids", shapes.superellipsoid)):
+        arrays = {}
+        for sid, s in json.loads((DATA / f"{name}.json").read_text())["shapes"].items():
+            mesh = build(s)
+            arrays[f"{sid}__verts"], arrays[f"{sid}__faces"] = mesh
+            print(sid, len(mesh.verts), flush=True)
+        np.savez_compressed(out / f"{name}.npz", **arrays)
 
 
 if __name__ == "__main__":

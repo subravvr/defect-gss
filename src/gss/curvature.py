@@ -1,8 +1,8 @@
 """Mean curvature and its spectral smoothing (paper Sec. 2.1, steps 1-2).
 
 H is estimated with the cotangent Laplace-Beltrami operator, projected onto the
-generalized eigenbasis L phi = lambda M phi, and truncated at a per-defect
-index n_e chosen by the elbow of the cumulative spectral energy.
+generalized eigenbasis L phi = lambda M phi, and truncated at the Nyquist band
+limit of the triangulation. The constant mode is kept.
 """
 import numpy as np
 from scipy.sparse.linalg import eigsh
@@ -39,37 +39,21 @@ def eigenbasis(L, M, k):
 
 
 def project(field, eigvecs, M, k):
-    """Reconstruction of `field` on modes 1..k-1 (the constant mode is dropped).
+    """Reconstruction of `field` on the first k modes, constant mode included.
 
-    Returns (reconstruction, coefficients).
+    Keeping the constant mode keeps the mean of the field, so a convex surface
+    keeps H > 0 everywhere. Returns (reconstruction, coefficients).
     """
-    coeffs = eigvecs[:, 1:k].T @ (M @ field)
-    return eigvecs[:, 1:k] @ coeffs, coeffs
+    coeffs = eigvecs[:, :k].T @ (M @ field)
+    return eigvecs[:, :k] @ coeffs, coeffs
 
 
-def elbow_cutoff(field, eigvecs, M):
-    """Truncation index by the elbow of the cumulative spectral energy C(m).
+def band_limit(mesh, samples_per_wavelength=2.0):
+    """Truncation index at the Nyquist band limit of the triangulation.
 
-    The elbow is the point farthest from the secant joining the first and last
-    points of C(m). The returned k is passed straight to `project`, which keeps
-    modes 1..k-1.
-    """
-    _, coeffs = project(field, eigvecs, M, eigvecs.shape[1])
-    energy = np.cumsum(coeffs**2) / np.sum(coeffs**2)
-
-    x = np.arange(len(energy))
-    line = np.array([x[-1] - x[0], energy[-1] - energy[0]], dtype=float)
-    line /= np.linalg.norm(line)
-    pts = np.stack([x, energy], axis=1) - np.array([x[0], energy[0]])
-    dist = np.linalg.norm(pts - (pts @ line)[:, None] * line, axis=1)
-    return int(np.argmax(dist)) + 1
-
-
-def band_limit(mesh, samples_per_wavelength=4.0):
-    """Truncation index from the mesh resolution instead of the elbow.
-
-    Weyl's law with the mean edge h: k = pi A / (n^2 h^2). Used for the
-    superellipsoid table, where the elbow is bimodal across re-triangulations.
+    A mode of wavelength l = 2 pi / sqrt(lambda) is resolved if sampled n times
+    per wavelength by the mean edge h; with Weyl's law N(lambda) ~ A lambda / (4 pi)
+    this gives k = pi A / (n^2 h^2).
     """
     v, f = as_mesh(mesh)
     e = np.concatenate([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
@@ -81,19 +65,17 @@ def band_limit(mesh, samples_per_wavelength=4.0):
     return int(min(max(round(k), 2), len(v) - 1))
 
 
-def smoothed_curvature(verts, faces, k=None, n_eigs=None):
+def smoothed_curvature(verts, faces, k=None):
     """H, its truncated reconstruction H_hat, and the truncation index used.
 
-    k=None selects the index with `elbow_cutoff`. n_eigs=None solves the full
-    spectrum (n_verts - 1 modes), which is what the published results used.
+    k=None uses `band_limit` (n = 2 samples per wavelength).
     """
     _, L, M = operators(verts, faces)
     H = mean_curvature(verts, faces, L, M)
-    n = len(verts) - 1 if n_eigs is None else min(n_eigs, len(verts) - 1)
-    _, eigvecs = eigenbasis(L, M, n)
     if k is None:
-        k = elbow_cutoff(H, eigvecs, M)
-    else:
-        k = int(min(max(k, 2), n))
+        k = band_limit((verts, faces))
+    k = int(min(max(k, 2), len(verts) - 1))
+    evals, eigvecs = eigenbasis(L, M, k)
+    eigvecs = eigvecs[:, np.argsort(evals)]
     H_hat, _ = project(H, eigvecs, M, k)
     return {"H": H, "H_hat": H_hat, "k": k, "eigvecs": eigvecs, "M": M}

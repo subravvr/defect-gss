@@ -7,36 +7,19 @@ with implicit function (a = 1)
 evaluated on q = p / (1 + delta * P4(p_z/|p|)). The surface is f = 1. A spheroid
 is the special case e1 = e2 = 1, b = 1, delta = 0.
 
-Ellipsoids are rasterized and meshed through an antialiased voxel route (as a
-CT defect would be); superellipsoids are meshed directly on the analytic surface.
-Meshing needs pymeshlab and trimesh.
+Both families are meshed directly on the analytic surface (icosphere
+projection + isotropic remeshing). Meshing needs pymeshlab and trimesh.
 """
 import math
 
 import numpy as np
 
-from .mesh import Mesh, enclosed_volume, mass_matrix
+from .mesh import Mesh, enclosed_volume
 
 TARGET_EDGE = 0.15
 
 
 # ------------------------------------------------------------------ meshing
-
-def occupancy_grid(coords, pad=5):
-    """Binary grid around (N, 3) voxel indices, with `pad` empty voxels each side."""
-    coords = np.asarray(coords)
-    lo = np.min(coords, axis=0) - pad
-    shifted = coords - lo
-    grid = np.zeros((np.max(coords, axis=0) + pad - lo + 1).astype(int), dtype=bool)
-    grid[shifted[:, 0], shifted[:, 1], shifted[:, 2]] = True
-    return grid
-
-
-def normalize_area(verts, faces):
-    """Scale so the barycentric area is (almost exactly) 4*pi."""
-    area = mass_matrix(verts, faces).diagonal().sum()
-    return verts / (np.sqrt(area / (4 * np.pi)) + 1e-6)
-
 
 def repair(verts, faces):
     """Drop non-finite vertices; fill holes and fix winding if not watertight."""
@@ -82,42 +65,9 @@ def isotropic_remesh(verts, faces, target_edge=TARGET_EDGE, max_surf_dist=0.1,
             np.asarray(m.face_matrix(), dtype=np.int64))
 
 
-def antialiased_isosurface(grid, sigma=0.4, supersample=2):
-    """Marching cubes on a resampled, low-passed signed distance field.
-
-    `sigma` is in original voxel units. Vertices are returned as float32 in
-    original voxel units, as the stored surfaces were built.
-    """
-    from scipy.ndimage import distance_transform_edt, gaussian_filter, zoom
-    from skimage.measure import marching_cubes
-
-    grid = np.asarray(grid, bool)
-    field = (distance_transform_edt(~grid) - distance_transform_edt(grid)).astype(float)
-    if supersample > 1:
-        field = zoom(field, supersample, order=3)
-    if sigma > 0.0:
-        field = gaussian_filter(field, sigma * supersample)
-    verts, faces = marching_cubes(-field, level=0.0)[:2]
-    return (verts / supersample).astype(np.float32), faces
-
-
-def antialiased_surface(coords, sigma=0.4, supersample=2, target_edge=TARGET_EDGE,
-                        max_surf_dist=0.3):
-    """Voxel mask -> remeshed, centred, inward-wound surface of area ~4*pi."""
-    grid = occupancy_grid(coords)
-    verts, faces = antialiased_isosurface(grid, sigma, supersample)
-    verts = normalize_area(verts, faces)
-    verts, faces = isotropic_remesh(verts, faces, target_edge, max_surf_dist)
-    verts, faces = repair(verts, faces)
-    verts = np.asarray(verts, float)
-    faces = np.asarray(faces, np.int64)
-    return Mesh(verts - verts.mean(axis=0), orient_inward(verts, faces))
-
-
 # ------------------------------------------------------ spheroid family (Sec. 3.1)
 
 GAMMA_MIN, GAMMA_MAX, N_GAMMA = 0.5, 2.0, 21
-RASTER_LONGEST = 15   # voxels across the equal-volume sphere
 
 
 def gamma_grid(n=N_GAMMA):
@@ -136,30 +86,9 @@ def spheroid_params(gamma):
             "delta": 0.0}
 
 
-def rasterize(p, longest, ref_extent, extents):
-    """(N, 3) int16 voxel indices of the shape on a lattice of spacing ref/longest.
-
-    `ref_extent` fixes the lattice spacing; `extents` (the shape's own
-    bounding-box size) fixes the grid size so nothing is clipped.
-    """
-    ref = np.asarray(ref_extent, float)
-    h = ref.max() / float(longest)
-    ns = np.ceil(np.maximum(np.asarray(extents, float), ref) / h).astype(int) + 6
-    axes = [(np.arange(n) - (n - 1) / 2.0) * h for n in ns]
-    grid = np.stack(np.meshgrid(*axes, indexing="ij"), -1).reshape(-1, 3)
-    occ = (implicit(grid, p) <= 1.0).reshape(ns)
-    return np.argwhere(occ).astype(np.int16)
-
-
-def spheroid_voxels(gamma, longest=RASTER_LONGEST):
-    """Voxel mask of the gamma-family member on a lattice fixed by the equal-volume sphere."""
-    d = 2.0 * gamma ** (-1 / 3)
-    return rasterize(spheroid_params(gamma), longest, (d, d, d), (2.0, 2.0, 2.0 / gamma))
-
-
-def ellipsoid(gamma, sigma=0.4, supersample=2):
-    """Mesh of one family member: voxelized, antialiased and remeshed (area ~4*pi)."""
-    return antialiased_surface(spheroid_voxels(gamma), sigma, supersample)
+def ellipsoid(gamma, seed=None):
+    """Mesh of one family member on its analytic surface (area 4*pi)."""
+    return superellipsoid(spheroid_params(gamma), seed=seed)
 
 
 # --------------------------------------------------------- superellipsoids

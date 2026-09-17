@@ -2,19 +2,18 @@
 
     python scripts/compute_gss.py [--replicates 9]
 
-With --replicates N, each superellipsoid is also scored on N-1 re-triangulations
-(rotated starting icosphere, needs pymeshlab) with the band-limit truncation;
-the mean is the value in the paper's Table 2. Replicates whose spherical
-embedding fails are skipped and listed.
+`gss` is the score on the stored mesh. With --replicates N, each shape is also
+re-meshed N-1 times (rotated starting icosphere, needs pymeshlab) and
+`gss_mean` / `gss_sd` summarize the N meshes; the paper reports `gss_mean`.
+Replicates whose spherical embedding fails are skipped and listed.
 """
 import argparse
 import csv
 import json
-from pathlib import Path
 
 import numpy as np
 
-from gss import band_limit, gss, load, shapes
+from gss import gss, load, shapes
 from gss.descriptors import describe
 from gss.mesh import DATA
 
@@ -30,47 +29,46 @@ def write(name, rows):
     print(f"wrote results/{name}")
 
 
-def ellipsoids():
-    meta = json.loads((DATA / "ellipsoids.json").read_text())["shapes"]
+def replicate(mesh, remesh, n):
+    """Mean, sd and failures of the GSS over the stored mesh and n-1 re-meshings."""
+    values, failed = [], []
+    for seed in [None] + list(range(1, n)):
+        m = mesh if seed is None else remesh(seed)
+        try:
+            values.append(gss(m).value)
+        except RuntimeError:
+            failed.append(str(seed))
+    return {"gss_mean": float(np.mean(values)), "gss_sd": float(np.std(values, ddof=1)),
+            "n_replicates": len(values), "failed_seeds": " ".join(failed)}
+
+
+def family(name, meta, remesh, extra, replicates):
     rows = []
-    for sid, mesh in load("ellipsoids").items():
+    for sid, mesh in load(name).items():
         r = gss(mesh)
-        rows.append({"shape": sid, "gamma": meta[sid]["gamma"], "n_verts": len(mesh.verts),
-                     "k": r.k, "gss": r.value, **describe(mesh)})
-        print(f"{sid}  gamma {meta[sid]['gamma']:.4f}  GSS {r.value:.4f}", flush=True)
-    write("gss_ellipsoids.csv", rows)
-
-
-def superellipsoids(replicates):
-    params = json.loads((DATA / "superellipsoids.json").read_text())["shapes"]
-    rows = []
-    for name, mesh in load("superellipsoids").items():
-        row = {"shape": name, "n_verts": len(mesh.verts), **params[name],
-               **describe(mesh), "gss_elbow": gss(mesh).value}
+        row = {"shape": sid, **extra(sid), "n_verts": len(mesh.verts), "k": r.k,
+               "gss": r.value, **describe(mesh)}
         if replicates:
-            values, failed = [], []
-            for seed in [None] + list(range(1, replicates)):
-                m = mesh if seed is None else shapes.superellipsoid(params[name], seed=seed)
-                try:
-                    values.append(gss(m, k=band_limit(m)).value)
-                except RuntimeError:
-                    failed.append(str(seed))
-            row.update({"gss_bandlimit_mean": float(np.mean(values)),
-                        "gss_bandlimit_sd": float(np.std(values, ddof=1)),
-                        "n_replicates": len(values), "failed_seeds": " ".join(failed)})
+            row.update(replicate(mesh, lambda seed: remesh(sid, seed), replicates))
         rows.append(row)
-        print(f"{name}  GSS elbow {row['gss_elbow']:.4f}"
-              + (f"  band-limit mean {row['gss_bandlimit_mean']:.4f}" if replicates else ""),
+        print(f"{sid}  GSS {r.value:.4f}"
+              + (f"  mean {row['gss_mean']:.4f} +/- {row['gss_sd']:.4f}" if replicates else ""),
               flush=True)
-    write("gss_superellipsoids.csv", rows)
+    write(f"gss_{name}.csv", rows)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--replicates", type=int, default=0)
-    args = ap.parse_args()
-    ellipsoids()
-    superellipsoids(args.replicates)
+    n = ap.parse_args().replicates
+
+    ell = json.loads((DATA / "ellipsoids.json").read_text())["shapes"]
+    family("ellipsoids", ell, lambda s, seed: shapes.ellipsoid(ell[s]["gamma"], seed),
+           lambda s: {"gamma": ell[s]["gamma"]}, n)
+
+    sup = json.loads((DATA / "superellipsoids.json").read_text())["shapes"]
+    family("superellipsoids", sup, lambda s, seed: shapes.superellipsoid(sup[s], seed),
+           lambda s: dict(sup[s]), n)
 
 
 if __name__ == "__main__":

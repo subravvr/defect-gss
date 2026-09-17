@@ -31,8 +31,8 @@ class Result:
 def gss(mesh, k=None, loading_dirs=transport.LOADING_DIRS):
     """Score a closed genus-0 surface (a Mesh or a (verts, faces) pair).
 
-    k=None picks the truncation index by the elbow rule; pass an int (e.g.
-    `curvature.band_limit(mesh)`) to fix it. Loading is along +/- z by default.
+    k=None truncates at the Nyquist band limit (`curvature.band_limit`); pass an
+    int to fix it. Loading is along +/- z by default.
     """
     verts, faces = as_mesh(mesh)
     t = {}

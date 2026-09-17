@@ -7,7 +7,6 @@ dependencies:
   - scipy=1.15.2
   - pot=0.9.6
   - matplotlib=3.10.8
-  - scikit-image=0.25.2
   - trimesh=4.11.5
   - pytest
   - pip

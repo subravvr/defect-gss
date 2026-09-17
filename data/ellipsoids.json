@@ -1,12 +1,6 @@
 {
- "description": "Equal-volume spheroids (R = 1), a1 = a2 = R gamma^(1/3), a3 = R gamma^(-2/3); surfaces normalized to area 4 pi. Load along a3.",
- "raster_longest_voxels": 15,
- "antialias": {
-  "sigma_voxels": 0.4,
-  "supersample": 2,
-  "target_edge": 0.15,
-  "max_surf_dist_percent": 0.3
- },
+ "description": "Equal-volume spheroids (R = 1), a1 = a2 = R gamma^(1/3), a3 = R gamma^(-2/3), load along a3. Meshed on the analytic surface (icosphere projection + isotropic remesh, target edge 0.15), area 4 pi; see gss.shapes.ellipsoid.",
+ "fea_cavity_volume": 1.25,
  "shapes": {
   "g00": {
    "gamma": 0.5,

@@ -84,10 +84,10 @@ def branch_handles():
 
 
 def ellipsoid_rows():
-    """Computed GSS joined with the reference Lambda_FEA and K_t, sorted by gamma."""
+    """Computed GSS (9-mesh mean if available) with the reference Lambda_FEA and K_t."""
     ref = REFERENCE["ellipsoids"]
-    rows = [{"gamma": float(r["gamma"]), "gss": float(r["gss"]), **ref[r["shape"]]}
-            for r in read_csv("gss_ellipsoids.csv")]
+    rows = [{"gamma": float(r["gamma"]), "gss": float(r.get("gss_mean") or r["gss"]),
+             **ref[r["shape"]]} for r in read_csv("gss_ellipsoids.csv")]
     return sorted(rows, key=lambda r: r["gamma"])
 
 
@@ -131,11 +131,11 @@ def figure_severity(rows):
 # ------------------------------------------------------- superellipsoids
 
 def superellipsoid_values():
-    """Descriptors and GSS (band-limit mean if computed) with the reference Lambda."""
+    """Descriptors and GSS (9-mesh mean if available) with the reference Lambda."""
     ref = REFERENCE["superellipsoids"]
     out = {}
     for r in read_csv("gss_superellipsoids.csv"):
-        g = r.get("gss_bandlimit_mean") or ref[r["shape"]]["gss"]
+        g = r.get("gss_mean") or r["gss"]
         out[r["shape"]] = {**{k: float(r[k]) for k in DESCRIPTOR_LABEL},
                            "gss": float(g), "lambda": ref[r["shape"]]["lambda"]}
     return out

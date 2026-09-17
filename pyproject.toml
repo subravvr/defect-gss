@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = ["numpy", "scipy", "pot", "matplotlib"]
 
 [project.optional-dependencies]
-meshing = ["pymeshlab", "trimesh", "scikit-image"]
+meshing = ["pymeshlab", "trimesh"]
 test = ["pytest"]
 
 [tool.setuptools.packages.find]

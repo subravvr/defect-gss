@@ -31,7 +31,13 @@ def test_load(family):
 
 
 def test_published_values():
-    assert abs(gss(load("ellipsoids", "g10")).value - REF["ellipsoids"]["g10"]["gss"]) < 1e-10
-    mesh, ref = load("superellipsoids", "G1A"), REF["superellipsoids"]["G1A"]
-    assert band_limit(mesh) == ref["k_replicates"][0]
-    assert abs(gss(mesh, k=band_limit(mesh)).value - ref["gss_replicates"][0]) < 1e-10
+    for family, name in (("ellipsoids", "g10"), ("superellipsoids", "G1A")):
+        mesh, ref = load(family, name), REF[family][name]
+        assert abs(gss(mesh).value - ref["gss"]) < 1e-10
+    assert band_limit(load("superellipsoids", "G1A")) == REF["superellipsoids"]["G1A"]["k"]
+
+
+def test_mean_mode_kept():
+    # A convex surface keeps H_hat > 0 when the constant mode is retained.
+    r = gss(load("ellipsoids", "g00"))
+    assert np.all(r.H_hat > 0)
