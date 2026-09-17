@@ -89,3 +89,6 @@ pytest
 ## Citation
 
 See `CITATION.cff`.
+
+## AI Usage
+The original code was developed with minimal AI assistance (Copilot). Claude was used to generate plotting code, write tests, and package the code into a GitHub-friendly repo.
