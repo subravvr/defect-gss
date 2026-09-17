@@ -1,6 +1,6 @@
-# defect-gss
+# Geometric severity score for defects in laser powder bed fusion
 
-This repository holds the geometric severity score (GSS) and the test geometries from *Assessment of geometric severity for defects in laser powder bed fusion* (V. Subraveti, C. Oskay).
+This repository holds the geometric severity score (GSS) and the test geometries from *Assessment of geometric severity for defects in laser powder bed fusion* (V. Subraveti, C. Oskay). You can cite this repo at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22817561.svg)](https://doi.org/10.5281/zenodo.22817561).
 
 The GSS ranks a defect by the shape of its surface. It works in four steps:
 1. Smooth the mean curvature spectrally, truncating at the Nyquist band limit of the triangulation and keeping the constant (mean) mode.
