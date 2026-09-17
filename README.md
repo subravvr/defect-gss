@@ -1,6 +1,6 @@
 # Geometric severity score for defects in laser powder bed fusion
 
-This repository holds the geometric severity score (GSS) and the test geometries from *Assessment of geometric severity for defects in laser powder bed fusion* (V. Subraveti, C. Oskay). You can cite this repo at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22817561.svg)](https://doi.org/10.5281/zenodo.22817561).
+This repository holds the geometric severity score (GSS) and the test geometries from *Assessment of geometric severity for defects in laser powder bed fusion* (V. Subraveti, C. Oskay). You can cite this repo at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22817560.svg)](https://doi.org/10.5281/zenodo.22817560).
 
 The GSS ranks a defect by the shape of its surface. It works in four steps:
 1. Smooth the mean curvature spectrally, truncating at the Nyquist band limit of the triangulation and keeping the constant (mean) mode.
@@ -36,6 +36,20 @@ Input surfaces must be closed and genus 0, area-normalized to 4π, and wound inw
 
 The returned `Result` also holds the intermediate fields: `H`, `H_hat`, `eta`, `u` (conformal factor) and `sphere` (vertex positions on the unit sphere).
 
+The Bayesian severity model (paper Sec. 2.3) fits Λ against GSS with a conjugate normal-inverse-gamma prior. It then assigns severity tiers from the posterior predictive distribution:
+
+```python
+from gss import blr
+out = blr.fit(x_cal, y_cal, x_val, y_val)   # GSS and Lambda arrays per split
+out["posterior"], out["tier_edges"], out["validation"]["confusion"]
+```
+
+`fit` returns the posterior on the Λ scale, the quartile tier edges, and the following for each split:
+- predictions and scores;
+- tier probabilities and median-tier calls;
+- the confusion matrix, with accuracy and quadratic-weighted κ;
+- a 95% predictive band.
+
 To mesh new shapes:
 
 ```python
@@ -56,6 +70,7 @@ src/gss/
   score.py         gss(mesh) -> Result
   shapes.py        ellipsoid family and superellipsoid meshing
   descriptors.py   sphericity, aspect ratios, Murakami sqrt(area)
+  blr.py           conjugate Bayesian linear regression and severity tiers
   plotting.py      figure style
 scripts/
   compute_gss.py           GSS and descriptors for all stored geometries -> results/
@@ -85,6 +100,15 @@ pytest
 - The paper reports `gss_mean`: the mean over the stored mesh and 8 re-meshings from rotated starting icospheres. One G3A re-meshing (seed 6) fails to embed and is skipped.
 - `generate_geometries.py` reproduces the stored meshes bit for bit, on the package versions in `environment.yml`.
 - ARPACK starts from a random vector, so GSS reproduces to about 1e-13.
+
+## Data availability
+
+This repository contains all data in the paper except the XCT defects:
+- the ellipsoid and superellipsoid geometries;
+- their GSS values;
+- the reference strain energy ratios and K_t values.
+
+The 92 segmented XCT defect surfaces and voxel masks analyzed in the paper come from X-ray computed tomography reconstructions provided by collaborators at Carnegie Mellon University. They are not ours to redistribute. They will be made publicly available with a forthcoming publication, and a link to the data source will be added here when it is released.
 
 ## Citation
 

@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pytest
 
-from gss import band_limit, gss, load, ricci_flow, transport
+from gss import band_limit, blr, gss, load, ricci_flow, transport
 from gss.mesh import DATA, enclosed_volume, icosphere
 
 REF = json.loads((DATA / "reference_values.json").read_text())
@@ -41,3 +41,14 @@ def test_mean_mode_kept():
     # A convex surface keeps H_hat > 0 when the constant mode is retained.
     r = gss(load("ellipsoids", "g00"))
     assert np.all(r.H_hat > 0)
+
+
+def test_blr_posterior_and_tiers():
+    rng = np.random.default_rng(0)
+    X = blr.design(rng.normal(size=40))
+    y = X @ [0.3, -1.2] + 0.1 * rng.normal(size=40)
+    post = blr.nig_posterior(X, y)
+    assert np.allclose(post["beta"], np.linalg.solve(np.eye(2) / 4.0 + X.T @ X, X.T @ y))
+    loc, scale, df = blr.predictive(post, X[:5])
+    P = blr.tier_probabilities(loc, scale, df, np.array([-1.0, 0.0, 1.0]))
+    assert np.allclose(P.sum(axis=1), 1.0)

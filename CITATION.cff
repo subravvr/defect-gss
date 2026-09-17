@@ -8,8 +8,10 @@ authors:
   - family-names: Oskay
     given-names: Caglar
     affiliation: Vanderbilt University
-version: 1.0.0
-# doi: 10.5281/zenodo.XXXXXXX   (add after the Zenodo deposit)
+version: 1.0.2
+doi: 10.5281/zenodo.22817560
+license: CC-BY-4.0
+repository-code: "https://github.com/subravvr/defect-gss"
 preferred-citation:
   type: article
   title: "Assessment of geometric severity for defects in laser powder bed fusion"
