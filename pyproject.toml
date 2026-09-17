@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gss"
+version = "1.0.0"
+description = "Geometric severity score for defects in laser powder bed fusion"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "pot", "matplotlib"]
+
+[project.optional-dependencies]
+meshing = ["pymeshlab", "trimesh", "scikit-image"]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

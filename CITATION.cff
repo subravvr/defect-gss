@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite the article below."
+title: "defect-gss: geometric severity score for LPBF defects"
+authors:
+  - family-names: Subraveti
+    given-names: Vamsi
+    affiliation: Vanderbilt University
+  - family-names: Oskay
+    given-names: Caglar
+    affiliation: Vanderbilt University
+version: 1.0.0
+# doi: 10.5281/zenodo.XXXXXXX   (add after the Zenodo deposit)
+preferred-citation:
+  type: article
+  title: "Assessment of geometric severity for defects in laser powder bed fusion"
+  authors:
+    - family-names: Subraveti
+      given-names: Vamsi
+    - family-names: Oskay
+      given-names: Caglar
+  journal: "Integrating Materials and Manufacturing Innovation"
